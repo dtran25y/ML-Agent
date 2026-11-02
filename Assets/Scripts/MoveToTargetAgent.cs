@@ -73,5 +73,14 @@ public class MoveToTargetAgent : Agent
 
             EndEpisode();
         }
+        else if (other.CompareTag("Obstacle"))
+        {
+            SetReward(-0.5f);
+            //floor.material.color = 
+        }
+        else if (other.CompareTag("Checkpoint"))
+        {
+            SetReward(0.5f);
+        }
     }
 }
