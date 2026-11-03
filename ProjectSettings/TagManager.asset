@@ -6,6 +6,8 @@ TagManager:
   tags:
   - Target
   - Wall
+  - Obstacle
+  - Checkpoint
   layers:
   - Default
   - TransparentFX

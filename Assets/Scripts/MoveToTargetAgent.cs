@@ -1,3 +1,4 @@
+using System.Collections;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
@@ -13,6 +14,9 @@ public class MoveToTargetAgent : Agent
     [SerializeField] private Color winColour = Color.green;
     [SerializeField] private Color loseColour = Color.red;
     [SerializeField] private Color idleColour = Color.grey;
+
+    [SerializeField] private int checkpointIndex;
+    [SerializeField] private GameObject[] checkpoints;
 
     public override void OnEpisodeBegin()
     {
@@ -38,6 +42,9 @@ public class MoveToTargetAgent : Agent
 
         // Small penalty every step so it learns to hurry
         if (MaxStep > 0) AddReward(-1f / MaxStep);
+
+        // Small penalty every step away from next checkpoint so it learns the intended route
+        if (MaxStep > 0) AddReward(-1f /MaxStep);
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
@@ -75,12 +82,27 @@ public class MoveToTargetAgent : Agent
         }
         else if (other.CompareTag("Obstacle"))
         {
-            SetReward(-0.5f);
-            //floor.material.color = 
+            SetReward(-0.75f);
+            //floor.material.color = warnColour;
+
+            StartCoroutine(OnObstacleCollision());
         }
         else if (other.CompareTag("Checkpoint"))
         {
-            SetReward(0.5f);
+            SetReward(1f);
+
+
         }
+    }
+
+    private IEnumerator OnObstacleCollision()
+    {
+        float currentSpeed = moveSpeed;
+        moveSpeed = currentSpeed / 2f;
+
+        // Whatever recovery time the agent has
+        yield return null;
+
+        moveSpeed = currentSpeed;
     }
 }
