@@ -26,6 +26,8 @@ public class MoveToTargetAgent : Agent
     private int nextCheckpointIndex = 0;
     private int checkpointActivated = 0;
 
+    private int checkpointSize;
+
     public static MoveToTargetAgent instance;
 
 
@@ -33,18 +35,31 @@ public class MoveToTargetAgent : Agent
     {
         transform.localPosition = new Vector3(
         Random.Range(-4f, 4f), 0.5f, Random.Range(-4f, 0f));
+        /*
         target.localPosition = new Vector3(
         Random.Range(-4f, 4f), 0.5f, Random.Range(1f, 4f));
+        */
 
         transform.forward = checkpoints[0].transform.forward;
-
+        nextCheckpointIndex = 0;
+        checkpointActivated = 0;
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
         sensor.AddObservation(transform.localPosition); // 3
         sensor.AddObservation(target.localPosition);
+
+        // Ray perception replace Vector
     }
+
+    /*
+    public override void CollectObservations(RayPerceptionSensor sensor)
+    {
+        sensor.AddObServation();
+
+    }
+    */
 
     public override void OnActionReceived(ActionBuffers actions)
     {
@@ -56,9 +71,6 @@ public class MoveToTargetAgent : Agent
 
         // Small penalty every step so it learns to hurry
         if (MaxStep > 0) AddReward(-1f / MaxStep);
-
-        // Small penalty every step away from next checkpoint so it learns the intended route
-        if (MaxStep > 0) AddReward(-1f /MaxStep);
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
@@ -78,6 +90,8 @@ public class MoveToTargetAgent : Agent
         floor.material.color = idleColour;
 
         if (instance == null) instance = this;
+
+        checkpointSize = checkpoints.Length - 1;
     }
 
     private void OnTriggerEnter(Collider other)
@@ -106,9 +120,13 @@ public class MoveToTargetAgent : Agent
         }
         else if (other.CompareTag("Checkpoint"))
         {
+            /*
             if (checkpointIndex != nextCheckpointIndex)
             checkpointActivated++;
             SetReward(0.5f + (checkpointActivated /2));
+            */
+
+            if (checkpointIndex >= checkpointSize) EndEpisode();
         }
     }
 
@@ -131,13 +149,16 @@ public class MoveToTargetAgent : Agent
         if (checkpointIndex != nextCheckpointIndex) SetReward(-1f);
 
         // Reaches the correct checkpoint
-        else if (checkpointIndex == nextCheckpointIndex++)
+        else if (checkpointIndex == nextCheckpointIndex)
         {
-            SetReward(0.5f + (checkpointActivated / 2));
-
             checkpointActivated++;
-            checkpointIndex++;
             nextCheckpointIndex++;
+
+            SetReward(0.5f + (checkpointActivated / 2));
+        }
+        else if (checkpointIndex >= nextCheckpointIndex)
+        {
+            
         }
     }
 }
