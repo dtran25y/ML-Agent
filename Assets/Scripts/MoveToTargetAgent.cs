@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Runtime.CompilerServices;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
@@ -7,16 +8,26 @@ using UnityEngine.InputSystem;
 
 public class MoveToTargetAgent : Agent
 {
+    [Header("Properties:")]
     [SerializeField] private Transform target;
     [SerializeField] private float moveSpeed = 3f;
     [SerializeField] private Renderer floor;
+    [SerializeField,Range(0, 10)] private float recoveryTime = 4f;
 
+    [Header("Colours:")]
     [SerializeField] private Color winColour = Color.green;
     [SerializeField] private Color loseColour = Color.red;
     [SerializeField] private Color idleColour = Color.grey;
+    [SerializeField] private Color warnColour = Color.orange;
 
+    [Header("Checkpoint Values:")]
+    [SerializeField] private Checkpoint[] checkpoints;
     [SerializeField] private int checkpointIndex;
-    [SerializeField] private GameObject[] checkpoints;
+    private int nextCheckpointIndex = 0;
+    private int checkpointActivated = 0;
+
+    public static MoveToTargetAgent instance;
+
 
     public override void OnEpisodeBegin()
     {
@@ -24,6 +35,9 @@ public class MoveToTargetAgent : Agent
         Random.Range(-4f, 4f), 0.5f, Random.Range(-4f, 0f));
         target.localPosition = new Vector3(
         Random.Range(-4f, 4f), 0.5f, Random.Range(1f, 4f));
+
+        transform.forward = checkpoints[0].transform.forward;
+
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -62,6 +76,8 @@ public class MoveToTargetAgent : Agent
     public override void Initialize() // runs once at startup
     {
         floor.material.color = idleColour;
+
+        if (instance == null) instance = this;
     }
 
     private void OnTriggerEnter(Collider other)
@@ -83,15 +99,16 @@ public class MoveToTargetAgent : Agent
         else if (other.CompareTag("Obstacle"))
         {
             SetReward(-0.75f);
-            //floor.material.color = warnColour;
+            floor.material.color = warnColour;
 
+            StopAllCoroutines();
             StartCoroutine(OnObstacleCollision());
         }
         else if (other.CompareTag("Checkpoint"))
         {
-            SetReward(1f);
-
-
+            if (checkpointIndex != nextCheckpointIndex)
+            checkpointActivated++;
+            SetReward(0.5f + (checkpointActivated /2));
         }
     }
 
@@ -100,9 +117,27 @@ public class MoveToTargetAgent : Agent
         float currentSpeed = moveSpeed;
         moveSpeed = currentSpeed / 2f;
 
+        moveSpeed = Mathf.Clamp(moveSpeed += Time.deltaTime /2 , 0f, currentSpeed);
+
         // Whatever recovery time the agent has
-        yield return null;
+        yield return new WaitForSeconds(recoveryTime);
 
         moveSpeed = currentSpeed;
+        floor.material.color = idleColour;
+    }
+
+    public void OnCheckpointReached(int checkpointIndex)
+    {
+        if (checkpointIndex != nextCheckpointIndex) SetReward(-1f);
+
+        // Reaches the correct checkpoint
+        else if (checkpointIndex == nextCheckpointIndex++)
+        {
+            SetReward(0.5f + (checkpointActivated / 2));
+
+            checkpointActivated++;
+            checkpointIndex++;
+            nextCheckpointIndex++;
+        }
     }
 }
