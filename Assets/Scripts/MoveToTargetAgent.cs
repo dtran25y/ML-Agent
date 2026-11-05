@@ -164,7 +164,7 @@ public class MoveToTargetAgent : Agent
         }
         else if (other.CompareTag("Obstacle"))
         {
-            SetReward(-4f);
+            SetReward(-1f);
             floor.material.color = warnColour;
 
             //StopAllCoroutines();
@@ -180,7 +180,7 @@ public class MoveToTargetAgent : Agent
         }
         else if (other.CompareTag("Offroad"))
         {
-            SetReward(-4f);
+            SetReward(-2f);
             EndEpisode();
         }
     }
@@ -204,22 +204,21 @@ public class MoveToTargetAgent : Agent
     public void OnCheckpointReached(int indexPosition)
     {
 
-        if (indexPosition != nextCheckpointIndex)
+        if (indexPosition != (nextCheckpointIndex % checkpointSize))
         {
-            SetReward(-3f);
+            SetReward(-2f);
             EndEpisode();
         }
         // Reaches the correct checkpoint
-        else if (indexPosition == nextCheckpointIndex)
+        else if (indexPosition == (nextCheckpointIndex % checkpointSize))
         {
             checkpointActivated++;
             nextCheckpointIndex++;
             currentIndex++;
 
-            SetReward(1.5f + currentIndex);
+            SetReward(5f + currentIndex);
+
+            floor.material.color = winColour;
         }
     }
-
-
-
 }
