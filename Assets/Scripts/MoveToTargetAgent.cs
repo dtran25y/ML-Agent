@@ -32,6 +32,8 @@ public class MoveToTargetAgent : Agent
     private int nextCheckpointIndex = 0;
     private int checkpointActivated = 0;
 
+    private float fibonnaciConstant;
+
     private int checkpointSize;
 
     public static MoveToTargetAgent instance;
@@ -150,14 +152,14 @@ public class MoveToTargetAgent : Agent
         }
         else if (other.CompareTag("Wall"))
         {
-            SetReward(-5f);
+            SetReward(-4f - (10 / (currentIndex + 1)));
             floor.material.color = loseColour;
 
             EndEpisode();
         }
         else if (other.CompareTag("Obstacle"))
         {
-            SetReward(-10f);
+            SetReward(-4f - (10 / (currentIndex + 1)));
             floor.material.color = warnColour;
 
             //StopAllCoroutines();
@@ -199,7 +201,7 @@ public class MoveToTargetAgent : Agent
 
         if (indexPosition != (nextCheckpointIndex % checkpointSize))
         {
-            SetReward(-2f);
+            SetReward(-3f);
             EndEpisode();
         }
         // Reaches the correct checkpoint
@@ -209,7 +211,7 @@ public class MoveToTargetAgent : Agent
             nextCheckpointIndex++;
             currentIndex++;
 
-            SetReward(5f + currentIndex);
+            AddReward(5f + (currentIndex * 2));
 
             floor.material.color = winColour;
         }
