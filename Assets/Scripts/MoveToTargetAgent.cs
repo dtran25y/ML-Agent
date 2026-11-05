@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Runtime.CompilerServices;
+using TMPro;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -10,9 +12,13 @@ public class MoveToTargetAgent : Agent
 {
     [Header("Properties:")]
     [SerializeField] private Transform target;
-    [SerializeField] private float moveSpeed = 3f;
     [SerializeField] private Renderer floor;
     [SerializeField,Range(0, 10)] private float recoveryTime = 4f;
+
+    public TMP_Text current;
+    public TMP_Text next;
+
+    private AgentMovement agentMovement;
 
     [Header("Colours:")]
     [SerializeField] private Color winColour = Color.green;
@@ -22,7 +28,7 @@ public class MoveToTargetAgent : Agent
 
     [Header("Checkpoint Values:")]
     [SerializeField] private Checkpoint[] checkpoints;
-    [SerializeField] private int checkpointIndex;
+    [SerializeField] private int currentIndex;
     private int nextCheckpointIndex = 0;
     private int checkpointActivated = 0;
 
@@ -30,6 +36,16 @@ public class MoveToTargetAgent : Agent
 
     public static MoveToTargetAgent instance;
 
+    private void Awake()
+    {
+        agentMovement = GetComponent<AgentMovement>();
+    }
+
+    private void Update()
+    {
+        current.text = currentIndex.ToString() + " / " + checkpointSize.ToString();
+        next.text = nextCheckpointIndex.ToString();
+    }
 
     public override void OnEpisodeBegin()
     {
@@ -43,14 +59,17 @@ public class MoveToTargetAgent : Agent
         transform.forward = checkpoints[0].transform.forward;
         nextCheckpointIndex = 0;
         checkpointActivated = 0;
+        currentIndex = 0;
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        sensor.AddObservation(transform.localPosition); // 3
-        sensor.AddObservation(target.localPosition);
+        //sensor.AddObservation(transform.localPosition); // 3
+        //sensor.AddObservation(target.localPosition);
 
-        // Ray perception replace Vector
+        Vector3 checkpointForward = checkpoints[nextCheckpointIndex].transform.forward;
+        float directionDotProduct = Vector3.Dot(transform.forward, checkpointForward);
+        sensor.AddObservation(directionDotProduct);
     }
 
     /*
@@ -63,18 +82,39 @@ public class MoveToTargetAgent : Agent
 
     public override void OnActionReceived(ActionBuffers actions)
     {
+        /*
         float moveX = actions.ContinuousActions[0];
         float moveZ = actions.ContinuousActions[1];
 
         Vector3 move = new Vector3(moveX, 0f, moveZ);
         transform.localPosition += move * moveSpeed * Time.deltaTime;
+        */
+
+        float forwardInput = 0f;
+        float turnInput = 0f;
+
+        switch (actions.DiscreteActions[0])
+        {
+            case 0: forwardInput = 0f; break;
+            case 1: forwardInput = +1f; break;
+            case 2: forwardInput = -1f; break;
+        }
+        switch (actions.DiscreteActions[1])
+        {
+            case 0: turnInput = 0f; break;
+            case 1: turnInput = +1f; break;
+            case 2: turnInput = -1f; break;
+        }
+
+        agentMovement.MovementInputs(forwardInput, turnInput);
 
         // Small penalty every step so it learns to hurry
-        if (MaxStep > 0) AddReward(-1f / MaxStep);
+        //if (MaxStep > 0) AddReward(-1f / MaxStep);
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
+        /*
         var continuous = actionsOut.ContinuousActions;
         var kb = Keyboard.current;
         if (kb == null) return;
@@ -83,7 +123,19 @@ public class MoveToTargetAgent : Agent
                       - (kb.aKey.isPressed ? 1f : 0f);
         continuous[1] = (kb.wKey.isPressed ? 1f : 0f)
                       - (kb.sKey.isPressed ? 1f : 0f);
+        */
 
+        int forwardAction = 0;
+        if (Input.GetKey(KeyCode.W)) forwardAction = 1;
+        if (Input.GetKey(KeyCode.S)) forwardAction = 2;
+
+        int turnAction = 0;
+        if (Input.GetKey(KeyCode.D)) turnAction = 1;
+        if (Input.GetKey(KeyCode.A)) turnAction = 2;
+
+        ActionSegment<int> discreteActions = actionsOut.DiscreteActions;
+        discreteActions[0] = forwardAction;
+        discreteActions[1] = turnAction;
     }
     public override void Initialize() // runs once at startup
     {
@@ -112,11 +164,11 @@ public class MoveToTargetAgent : Agent
         }
         else if (other.CompareTag("Obstacle"))
         {
-            SetReward(-0.75f);
+            SetReward(-4f);
             floor.material.color = warnColour;
 
-            StopAllCoroutines();
-            StartCoroutine(OnObstacleCollision());
+            //StopAllCoroutines();
+            //StartCoroutine(OnObstacleCollision());
         }
         else if (other.CompareTag("Checkpoint"))
         {
@@ -125,11 +177,15 @@ public class MoveToTargetAgent : Agent
             checkpointActivated++;
             SetReward(0.5f + (checkpointActivated /2));
             */
-
-            if (checkpointIndex >= checkpointSize) EndEpisode();
+        }
+        else if (other.CompareTag("Offroad"))
+        {
+            SetReward(-4f);
+            EndEpisode();
         }
     }
 
+    /*
     private IEnumerator OnObstacleCollision()
     {
         float currentSpeed = moveSpeed;
@@ -143,22 +199,27 @@ public class MoveToTargetAgent : Agent
         moveSpeed = currentSpeed;
         floor.material.color = idleColour;
     }
+    */
 
-    public void OnCheckpointReached(int checkpointIndex)
+    public void OnCheckpointReached(int indexPosition)
     {
-        if (checkpointIndex != nextCheckpointIndex) SetReward(-1f);
 
+        if (indexPosition != nextCheckpointIndex)
+        {
+            SetReward(-3f);
+            EndEpisode();
+        }
         // Reaches the correct checkpoint
-        else if (checkpointIndex == nextCheckpointIndex)
+        else if (indexPosition == nextCheckpointIndex)
         {
             checkpointActivated++;
             nextCheckpointIndex++;
+            currentIndex++;
 
-            SetReward(0.5f + (checkpointActivated / 2));
-        }
-        else if (checkpointIndex >= nextCheckpointIndex)
-        {
-            
+            SetReward(1.5f + currentIndex);
         }
     }
+
+
+
 }

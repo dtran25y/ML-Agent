@@ -8,6 +8,7 @@ TagManager:
   - Wall
   - Obstacle
   - Checkpoint
+  - Offroad
   layers:
   - Default
   - TransparentFX
