@@ -50,7 +50,7 @@ public class MoveToTargetAgent : Agent
     public override void OnEpisodeBegin()
     {
         transform.localPosition = new Vector3(
-        Random.Range(-4f, 4f), 0.5f, Random.Range(-4f, 0f));
+        Random.Range(-4f, 4f), 1f, Random.Range(-4f, 0f));
         /*
         target.localPosition = new Vector3(
         Random.Range(-4f, 4f), 0.5f, Random.Range(1f, 4f));
@@ -72,13 +72,6 @@ public class MoveToTargetAgent : Agent
         sensor.AddObservation(directionDotProduct);
     }
 
-    /*
-    public override void CollectObservations(RayPerceptionSensor sensor)
-    {
-        sensor.AddObServation();
-
-    }
-    */
 
     public override void OnActionReceived(ActionBuffers actions)
     {
@@ -157,14 +150,14 @@ public class MoveToTargetAgent : Agent
         }
         else if (other.CompareTag("Wall"))
         {
-            SetReward(-1f);
+            SetReward(-5f);
             floor.material.color = loseColour;
 
             EndEpisode();
         }
         else if (other.CompareTag("Obstacle"))
         {
-            SetReward(-1f);
+            SetReward(-10f);
             floor.material.color = warnColour;
 
             //StopAllCoroutines();
