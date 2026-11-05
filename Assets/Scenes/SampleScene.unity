@@ -7464,6 +7464,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FaceAgent
   _agent: {fileID: 1623060077}
   isTrack: 0
+  _camera: {fileID: 0}
 --- !u!212 &1517439041
 SpriteRenderer:
   serializedVersion: 3
