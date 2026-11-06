@@ -12,7 +12,7 @@ public class FaceAgent : MonoBehaviour
 
     private void LateUpdate()
     {
-        transform.position = _agent.transform.position;
+        transform.position = new Vector3(_agent.transform.position.x, 2.5f, _agent.transform.position.z);
         if (!isTrack) transform.LookAt(_camera.transform.position);
     }
 }
