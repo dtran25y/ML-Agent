@@ -32,8 +32,6 @@ public class MoveToTargetAgent : Agent
     private int nextCheckpointIndex = 0;
     private int checkpointActivated = 0;
 
-    private float fibonnaciConstant;
-
     private int checkpointSize;
 
     public static MoveToTargetAgent instance;
@@ -53,10 +51,6 @@ public class MoveToTargetAgent : Agent
     {
         transform.localPosition = new Vector3(
         Random.Range(-4f, 4f), 1f, Random.Range(-4f, 0f));
-        /*
-        target.localPosition = new Vector3(
-        Random.Range(-4f, 4f), 0.5f, Random.Range(1f, 4f));
-        */
 
         transform.forward = checkpoints[0].transform.forward;
         nextCheckpointIndex = 0;
@@ -66,9 +60,6 @@ public class MoveToTargetAgent : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        //sensor.AddObservation(transform.localPosition); // 3
-        //sensor.AddObservation(target.localPosition);
-
         Vector3 checkpointForward = checkpoints[nextCheckpointIndex].transform.forward;
         float directionDotProduct = Vector3.Dot(transform.forward, checkpointForward);
         sensor.AddObservation(directionDotProduct);
@@ -77,14 +68,6 @@ public class MoveToTargetAgent : Agent
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        /*
-        float moveX = actions.ContinuousActions[0];
-        float moveZ = actions.ContinuousActions[1];
-
-        Vector3 move = new Vector3(moveX, 0f, moveZ);
-        transform.localPosition += move * moveSpeed * Time.deltaTime;
-        */
-
         float forwardInput = 0f;
         float turnInput = 0f;
 
@@ -102,24 +85,10 @@ public class MoveToTargetAgent : Agent
         }
 
         agentMovement.MovementInputs(forwardInput, turnInput);
-
-        // Small penalty every step so it learns to hurry
-        //if (MaxStep > 0) AddReward(-1f / MaxStep);
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
-        /*
-        var continuous = actionsOut.ContinuousActions;
-        var kb = Keyboard.current;
-        if (kb == null) return;
-
-        continuous[0] = (kb.dKey.isPressed ? 1f : 0f)
-                      - (kb.aKey.isPressed ? 1f : 0f);
-        continuous[1] = (kb.wKey.isPressed ? 1f : 0f)
-                      - (kb.sKey.isPressed ? 1f : 0f);
-        */
-
         int forwardAction = 0;
         if (Input.GetKey(KeyCode.W)) forwardAction = 1;
         if (Input.GetKey(KeyCode.S)) forwardAction = 2;
@@ -135,9 +104,7 @@ public class MoveToTargetAgent : Agent
     public override void Initialize() // runs once at startup
     {
         floor.material.color = idleColour;
-
         if (instance == null) instance = this;
-
         checkpointSize = checkpoints.Length - 1;
     }
 
@@ -161,17 +128,10 @@ public class MoveToTargetAgent : Agent
         {
             SetReward(-4f - (10 / (currentIndex + 1)));
             floor.material.color = warnColour;
-
-            //StopAllCoroutines();
-            //StartCoroutine(OnObstacleCollision());
         }
         else if (other.CompareTag("Checkpoint"))
         {
-            /*
-            if (checkpointIndex != nextCheckpointIndex)
-            checkpointActivated++;
-            SetReward(0.5f + (checkpointActivated /2));
-            */
+            return;
         }
         else if (other.CompareTag("Offroad"))
         {
@@ -180,25 +140,9 @@ public class MoveToTargetAgent : Agent
         }
     }
 
-    /*
-    private IEnumerator OnObstacleCollision()
-    {
-        float currentSpeed = moveSpeed;
-        moveSpeed = currentSpeed / 2f;
-
-        moveSpeed = Mathf.Clamp(moveSpeed += Time.deltaTime /2 , 0f, currentSpeed);
-
-        // Whatever recovery time the agent has
-        yield return new WaitForSeconds(recoveryTime);
-
-        moveSpeed = currentSpeed;
-        floor.material.color = idleColour;
-    }
-    */
-
     public void OnCheckpointReached(int indexPosition)
     {
-
+        // If the agent reaches the wrong checkpoint set reward negative feedback
         if (indexPosition != (nextCheckpointIndex % checkpointSize))
         {
             SetReward(-3f);
